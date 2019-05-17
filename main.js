@@ -6,7 +6,7 @@ var app = http.createServer(function(request,response){
     var _url = request.url;
     var queryData = url.parse(_url, true).query;
     var pathname = url.parse(_url, true).pathname;
-    var title = queryData.id;
+    var title = queryData.id === undefined ? 'Welcome' : queryData.id;
  
     if(pathname == '/'){
       fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
@@ -25,7 +25,7 @@ var app = http.createServer(function(request,response){
             <li><a href="/?id=JavaScript">JavaScript</a></li>
           </ul>
           <h2>${title}</h2>
-          <p>${description}</p>
+          <p>${title === 'Welcome' ? 'Hello, Node.js' : description}</p>
         </body>
         </html>
         `;
