@@ -1,6 +1,7 @@
 var http = require('http');
 var fs = require('fs');
 var url = require('url');
+var qs = require('querystring');
 
 function HTMLtemplate(title, list, body){
   return `
@@ -66,6 +67,18 @@ var app = http.createServer(function(request,response){
         response.writeHead(200);
         response.end(template);
       });
+    } else if(pathname === '/process_create') {
+      if (request.method == 'POST') {
+        var body = '';
+        request.on('data', (data) => {
+          body += data;
+        })
+        request.on('end', () => {
+          var post = qs.parse(body);
+          response.setHeader('Content-Type', 'application/json');
+          response.end(JSON.stringify(post));
+        })
+      }
     } else {
       response.writeHead(404);
       response.end('Not found');
