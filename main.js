@@ -75,8 +75,14 @@ var app = http.createServer(function(request,response){
         })
         request.on('end', () => {
           var post = qs.parse(body);
-          response.setHeader('Content-Type', 'application/json');
-          response.end(JSON.stringify(post));
+          const title = post.title;
+          const description = post.description;
+          fs.writeFile(`data/${title}`, description, 'utf8', (err) => {
+            response.writeHead(302, {
+              'Location' : `/?id=${title}`
+            });
+            response.end();
+          });
         })
       }
     } else {
