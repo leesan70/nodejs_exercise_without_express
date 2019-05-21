@@ -86,3 +86,9 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+
+# Static files other than the default ones
+data/
+!data/CSS
+!data/html
+!data/JavaScript

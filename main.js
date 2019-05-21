@@ -39,7 +39,7 @@ var app = http.createServer(function(request,response){
       fs.readdir('./data', function(err, filelist) {
         var title = queryData.id === undefined ? 'Welcome' : queryData.id;
         var crud = '<a href="/create">create</a>'.concat(
-          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a>`);
+          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a> <a href="delete?id=${queryData.id}">delete</a>`);
         var list = links(filelist, crud);
         fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
           var template = HTMLtemplate(
@@ -91,7 +91,7 @@ var app = http.createServer(function(request,response){
       fs.readdir('./data', function(err, filelist){
         var title = 'WEB - create';
         var crud = '<a href="/create">create</a>'.concat(
-          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a>`);
+          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a> <a href="delete?id=${queryData.id}">delete</a>`);
         var list = links(filelist, crud);
         fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
           var template = HTMLtemplate(title, list, `
@@ -121,10 +121,7 @@ var app = http.createServer(function(request,response){
           const id = post.id;
           const title = post.title;
           const description = post.description;
-          fs.readFile(`data/${id}`, 'utf8', (err, data) => {
-            if (!err) {
-              fs.unlinkSync(`data/${id}`);
-            }
+          fs.unlink(`data/${id}`, (err) => {
             fs.writeFile(`data/${title}`, description, 'utf8', (err) => {
               response.writeHead(302, {
                 'Location' : `/?id=${title}`
@@ -134,6 +131,14 @@ var app = http.createServer(function(request,response){
           });
         })
       }
+    } else if(pathname === '/delete') {
+      var title = queryData.id;
+      fs.unlink(`data/${title}`, (err) => {
+        response.writeHead(302, {
+          'Location' : `/`
+        });
+        response.end();
+      });
     } else {
       response.writeHead(404);
       response.end('Not found');
