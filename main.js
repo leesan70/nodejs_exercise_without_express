@@ -20,12 +20,12 @@ function HTMLtemplate(title, list, body){
   `;
 }
 
-function links(filelist) {
+function links(filelist, crud) {
   var hrefs = '<ul>';
   hrefs += filelist.map(
     (filename, index) => `<li><a href="/?id=${filename}">${filename}</a></li>`
   ).join('');
-  hrefs += '<a href="/create">create</a>';
+  hrefs += crud;
   hrefs += '</ul>';
   return hrefs;
 }
@@ -38,7 +38,9 @@ var app = http.createServer(function(request,response){
     if(pathname === '/'){
       fs.readdir('./data', function(err, filelist) {
         var title = queryData.id === undefined ? 'Welcome' : queryData.id;
-        var list = links(filelist);
+        var crud = '<a href="/create">create</a>'.concat(
+          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a>`);
+        var list = links(filelist, crud);
         fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
           var template = HTMLtemplate(
             title,
@@ -52,9 +54,9 @@ var app = http.createServer(function(request,response){
     } else if(pathname === '/create'){
       fs.readdir('./data', function(err, filelist){
         var title = 'WEB - create';
-        var list = links(filelist);
+        var list = links(filelist, '');
         var template = HTMLtemplate(title, list, `
-          <form action="http://localhost:3000/process_create" method="post">
+          <form action="/process_create" method="post">
             <p><input type="text" name="title" placeholder="title"></p>
             <p>
               <textarea name="description" placeholder="description"></textarea>
@@ -82,6 +84,53 @@ var app = http.createServer(function(request,response){
               'Location' : `/?id=${title}`
             });
             response.end();
+          });
+        })
+      }
+    } else if(pathname === '/update') {
+      fs.readdir('./data', function(err, filelist){
+        var title = 'WEB - create';
+        var crud = '<a href="/create">create</a>'.concat(
+          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a>`);
+        var list = links(filelist, crud);
+        fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
+          var template = HTMLtemplate(title, list, `
+          <form action="/process_update" method="post">
+            <input type="hidden" name="id" value="${queryData.id}">
+            <p><input type="text" name="title" value="${queryData.id}"></p>
+            <p>
+              <textarea name="description" placeholder="description">${description}</textarea>
+            </p>
+            <p>
+              <input type="submit">
+            </p>
+          </form>
+        `);
+        response.writeHead(200);
+        response.end(template);
+        });
+      });
+    } else if(pathname === '/process_update') {
+      if (request.method == 'POST') {
+        var body = '';
+        request.on('data', (data) => {
+          body += data;
+        })
+        request.on('end', () => {
+          var post = qs.parse(body);
+          const id = post.id;
+          const title = post.title;
+          const description = post.description;
+          fs.readFile(`data/${id}`, 'utf8', (err, data) => {
+            if (!err) {
+              fs.unlinkSync(`data/${id}`);
+            }
+            fs.writeFile(`data/${title}`, description, 'utf8', (err) => {
+              response.writeHead(302, {
+                'Location' : `/?id=${title}`
+              });
+              response.end();
+            });
           });
         })
       }
