@@ -39,7 +39,13 @@ var app = http.createServer(function(request,response){
       fs.readdir('./data', function(err, filelist) {
         var title = queryData.id === undefined ? 'Welcome' : queryData.id;
         var crud = '<a href="/create">create</a>'.concat(
-          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a> <a href="delete?id=${queryData.id}">delete</a>`);
+          queryData.id === undefined ? '' :
+            ` <a href="update?id=${queryData.id}">update</a>
+            <form action="/delete" method="post">
+              <input type="hidden" name="id" value="${queryData.id}">
+              <input type="submit" value="delete">
+            </form>
+            `);
         var list = links(filelist, crud);
         fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
           var template = HTMLtemplate(
@@ -91,7 +97,13 @@ var app = http.createServer(function(request,response){
       fs.readdir('./data', function(err, filelist){
         var title = 'WEB - create';
         var crud = '<a href="/create">create</a>'.concat(
-          queryData.id === undefined ? '' : ` <a href="update?id=${queryData.id}">update</a> <a href="delete?id=${queryData.id}">delete</a>`);
+          queryData.id === undefined ? '' :
+            ` <a href="update?id=${queryData.id}">update</a>
+            <form action="/delete" method="post">
+              <input type="hidden" name="id" value="${queryData.id}">
+              <input type="submit" value="delete">
+            </form>
+            `);
         var list = links(filelist, crud);
         fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
           var template = HTMLtemplate(title, list, `
@@ -132,13 +144,22 @@ var app = http.createServer(function(request,response){
         })
       }
     } else if(pathname === '/delete') {
-      var title = queryData.id;
-      fs.unlink(`data/${title}`, (err) => {
-        response.writeHead(302, {
-          'Location' : `/`
+      if (request.method == 'POST') {
+        var body = '';
+        request.on('data', (data) => {
+          body += data;
         });
-        response.end();
-      });
+        request.on('end', () => {
+          var post = qs.parse(body);
+          const id = post.id;
+          fs.unlink(`data/${id}`, (err) => {
+            response.writeHead(302, {
+              'Location' : `/`
+            });
+            response.end();
+          });
+        });
+      }
     } else {
       response.writeHead(404);
       response.end('Not found');
