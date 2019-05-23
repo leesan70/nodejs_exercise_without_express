@@ -1,58 +1,33 @@
-var http = require('http');
-var fs = require('fs');
-var url = require('url');
-var qs = require('querystring');
+const http = require('http');
+const fs = require('fs');
+const url = require('url');
+const qs = require('querystring');
+const templates = require('./lib/templates.js');
+const sanitizeHtml = require('sanitize-html');
 
-const templates = {
-  HTML: (title, list, body) => {
-    return `
-    <!doctype html>
-    <html>
-    <head>
-      <title>${title}</title>
-      <meta charset="utf-8">
-    </head>
-    <body>
-      <h1><a href="/">WEB</a></h1>
-      ${list}
-      ${body}
-    </body>
-    </html>
-    `;
-  }, 
-  links: (filelist, crud) => {
-    var hrefs = '<ul>';
-    hrefs += filelist.map(
-      (filename, index) => `<li><a href="/?id=${filename}">${filename}</a></li>`
-    ).join('');
-    hrefs += crud;
-    hrefs += '</ul>';
-    return hrefs;
-  }
-};
-
-var app = http.createServer(function(request,response){
-    var _url = request.url;
-    var queryData = url.parse(_url, true).query;
-    var pathname = url.parse(_url, true).pathname;
+const app = http.createServer(function(request,response){
+    const _url = request.url;
+    const queryData = url.parse(_url, true).query;
+    const pathname = url.parse(_url, true).pathname;
  
     if(pathname === '/'){
       fs.readdir('./data', function(err, filelist) {
-        var title = queryData.id === undefined ? 'Welcome' : queryData.id;
-        var crud = '<a href="/create">create</a>'.concat(
+        const sanitizedId = sanitizeHtml(queryData.id === undefined ? 'Welcome' : queryData.id);
+        const crud = '<a href="/create">create</a>'.concat(
           queryData.id === undefined ? '' :
-            ` <a href="update?id=${queryData.id}">update</a>
+            ` <a href="update?id=${sanitizedId}">update</a>
             <form action="/delete" method="post">
-              <input type="hidden" name="id" value="${queryData.id}">
+              <input type="hidden" name="id" value="${sanitizedId}">
               <input type="submit" value="delete">
             </form>
             `);
-        var list = templates.links(filelist, crud);
-        fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
-          var template = templates.HTML(
-            title,
+        const list = templates.links(filelist, crud);
+        fs.readFile(`data/${sanitizedId}`, 'utf8', function(err, description){
+          const sanitizedDescription = sanitizeHtml(description);
+          const template = templates.HTML(
+            sanitizedId,
             list,
-            `<p>${title === 'Welcome' ? 'Hello, Node.js' : description}</p>`
+            `<p>${sanitizedId === 'Welcome' ? 'Hello, Node.js' : sanitizedDescription}</p>`
           );
           response.writeHead(200);
           response.end(template);
@@ -60,9 +35,9 @@ var app = http.createServer(function(request,response){
       })
     } else if(pathname === '/create'){
       fs.readdir('./data', function(err, filelist){
-        var title = 'WEB - create';
-        var list = templates.links(filelist, '');
-        var template = templates.HTML(title, list, `
+        const title = 'WEB - create';
+        const list = templates.links(filelist, '');
+        const template = templates.HTML(title, list, `
           <form action="/process_create" method="post">
             <p><input type="text" name="title" placeholder="title"></p>
             <p>
@@ -78,17 +53,17 @@ var app = http.createServer(function(request,response){
       });
     } else if(pathname === '/process_create') {
       if (request.method == 'POST') {
-        var body = '';
+        let body = '';
         request.on('data', (data) => {
           body += data;
         })
         request.on('end', () => {
-          var post = qs.parse(body);
-          const title = post.title;
-          const description = post.description;
-          fs.writeFile(`data/${title}`, description, 'utf8', (err) => {
+          const post = qs.parse(body);
+          const sanitizedId = sanitizeHtml(post.title);
+          const sanitizedDescription = sanitizeHtml(post.description);
+          fs.writeFile(`data/${sanitizedId}`, sanitizedDescription, 'utf8', (err) => {
             response.writeHead(302, {
-              'Location' : `/?id=${title}`
+              'Location' : `/?id=${sanitizedId}`
             });
             response.end();
           });
@@ -96,23 +71,25 @@ var app = http.createServer(function(request,response){
       }
     } else if(pathname === '/update') {
       fs.readdir('./data', function(err, filelist){
-        var title = 'WEB - create';
-        var crud = '<a href="/create">create</a>'.concat(
+        const title = 'WEB - create';
+        const sanitizedId = sanitizeHtml(queryData.id);
+        const crud = '<a href="/create">create</a>'.concat(
           queryData.id === undefined ? '' :
-            ` <a href="update?id=${queryData.id}">update</a>
+            ` <a href="update?id=${sanitizedId}">update</a>
             <form action="/delete" method="post">
-              <input type="hidden" name="id" value="${queryData.id}">
+              <input type="hidden" name="id" value="${sanitizedId}">
               <input type="submit" value="delete">
             </form>
             `);
-        var list = templates.links(filelist, crud);
-        fs.readFile(`data/${queryData.id}`, 'utf8', function(err, description){
-          var template = templates.HTML(title, list, `
+        const list = templates.links(filelist, crud);
+        fs.readFile(`data/${sanitizedId}`, 'utf8', function(err, description){
+          const sanitizedDescription = sanitizedDescription(description);
+          const template = templates.HTML(title, list, `
           <form action="/process_update" method="post">
-            <input type="hidden" name="id" value="${queryData.id}">
-            <p><input type="text" name="title" value="${queryData.id}"></p>
+            <input type="hidden" name="id" value="${sanitizedId}">
+            <p><input type="text" name="title" value="${sanitizedId}"></p>
             <p>
-              <textarea name="description" placeholder="description">${description}</textarea>
+              <textarea name="description" placeholder="description">${sanitizedDescription}</textarea>
             </p>
             <p>
               <input type="submit">
@@ -125,19 +102,19 @@ var app = http.createServer(function(request,response){
       });
     } else if(pathname === '/process_update') {
       if (request.method == 'POST') {
-        var body = '';
+        let body = '';
         request.on('data', (data) => {
           body += data;
         })
         request.on('end', () => {
-          var post = qs.parse(body);
-          const id = post.id;
-          const title = post.title;
-          const description = post.description;
-          fs.unlink(`data/${id}`, (err) => {
-            fs.writeFile(`data/${title}`, description, 'utf8', (err) => {
+          const post = qs.parse(body);
+          const sanitizedId = sanitizeHtml(post.id);
+          const sanitizedTitle = sanitizeHtml(post.title);
+          const sanitizedDescription = sanitizeHtml(post.description);
+          fs.unlink(`data/${sanitizedId}`, (err) => {
+            fs.writeFile(`data/${sanitizedTitle}`, sanitizedDescription, 'utf8', (err) => {
               response.writeHead(302, {
-                'Location' : `/?id=${title}`
+                'Location' : `/?id=${sanitizedTitle}`
               });
               response.end();
             });
@@ -146,14 +123,14 @@ var app = http.createServer(function(request,response){
       }
     } else if(pathname === '/delete') {
       if (request.method == 'POST') {
-        var body = '';
+        let body = '';
         request.on('data', (data) => {
           body += data;
         });
         request.on('end', () => {
-          var post = qs.parse(body);
-          const id = post.id;
-          fs.unlink(`data/${id}`, (err) => {
+          const post = qs.parse(body);
+          const sanitizedId = sanitizeHtml(post.id);
+          fs.unlink(`data/${sanitizedId}`, (err) => {
             response.writeHead(302, {
               'Location' : `/`
             });
