@@ -20,6 +20,6 @@
   },
   "homepage": "https://github.com/leesan70/nodejs_exercise_without_express#readme",
   "dependencies": {
-    "sanitize-html": "^1.20.1"
+    "sanitize-html": "^2.3.2"
   }
 }
